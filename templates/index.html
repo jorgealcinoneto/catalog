@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Catálogo de Livros</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#f4f3ee;
+  --card:#fff;
+  --accent:#2d6a4f;
+  --accent2:#40916c;
+  --text:#1b1b1b;
+  --muted:#6b7280;
+  --border:#e5e7eb;
+  --danger:#dc2626;
+  --radius:12px;
+}
+
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  padding-bottom:72px;
+}
+
+/* ── Header ── */
+header{
+  background:var(--accent);
+  color:#fff;
+  padding:16px 20px 14px;
+  position:sticky;top:0;z-index:50;
+}
+header h1{font-size:20px;font-weight:700;letter-spacing:-.3px}
+header p{font-size:12px;opacity:.75;margin-top:1px}
+
+/* ── Bottom nav ── */
+nav{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--card);
+  border-top:1px solid var(--border);
+  display:flex;z-index:100;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+nav button{
+  flex:1;padding:10px 6px 8px;
+  background:none;border:none;cursor:pointer;
+  font-size:10px;color:var(--muted);
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  transition:color .15s;
+}
+nav button.active{color:var(--accent);font-weight:600}
+nav button svg{width:22px;height:22px}
+
+/* ── Sections ── */
+section{display:none;padding:16px}
+section.active{display:block}
+
+/* ── Card ── */
+.card{
+  background:var(--card);
+  border-radius:var(--radius);
+  padding:16px;
+  margin-bottom:12px;
+  box-shadow:0 1px 4px rgba(0,0,0,.07);
+}
+
+/* ── Buttons ── */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:13px 20px;border-radius:10px;border:none;cursor:pointer;
+  font-size:15px;font-weight:600;width:100%;transition:opacity .15s;
+}
+.btn:active{opacity:.7}
+.btn+.btn{margin-top:8px}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-secondary{background:var(--border);color:var(--text)}
+
+/* ── Form ── */
+label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:14px 0 4px;text-transform:uppercase;letter-spacing:.4px}
+input[type=text],input[type=search]{
+  width:100%;padding:11px 13px;
+  border:1.5px solid var(--border);border-radius:9px;
+  font-size:15px;background:#fff;
+  transition:border-color .15s;
+}
+input:focus{outline:none;border-color:var(--accent)}
+
+/* ── Capture zone ── */
+.capture-zone{
+  border:2px dashed var(--border);border-radius:var(--radius);
+  padding:36px 16px;text-align:center;cursor:pointer;
+  background:var(--card);margin-bottom:14px;
+  transition:border-color .2s,background .2s;
+}
+.capture-zone:hover{border-color:var(--accent);background:#f0faf5}
+.capture-zone img{max-height:220px;border-radius:8px;object-fit:contain}
+.capture-zone .hint{color:var(--muted);font-size:14px;margin-top:10px}
+.capture-zone .icon{color:#c4c4c4;margin:0 auto}
+
+/* ── Book list ── */
+.book-item{display:flex;gap:13px;align-items:flex-start}
+.book-thumb{
+  width:58px;height:78px;object-fit:cover;
+  border-radius:6px;flex-shrink:0;background:var(--border);
+}
+.thumb-placeholder{
+  width:58px;height:78px;border-radius:6px;
+  background:linear-gradient(135deg,#d1fae5,#a7f3d0);
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  font-size:26px;
+}
+.book-info{flex:1;min-width:0}
+.book-title{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.book-author{color:var(--muted);font-size:13px;margin-top:2px}
+.book-meta{font-size:12px;color:var(--muted);margin-top:3px}
+
+/* ── Search bar ── */
+.search-wrap{position:relative;margin-bottom:14px}
+.search-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.search-wrap input{padding-left:38px}
+
+/* ── Loader ── */
+.loader{display:none;text-align:center;padding:40px 16px;color:var(--muted)}
+.spinner{
+  width:30px;height:30px;margin:0 auto 10px;
+  border:3px solid var(--border);border-top-color:var(--accent);
+  border-radius:50%;animation:spin .75s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Toast ── */
+#toast{
+  position:fixed;bottom:82px;left:50%;
+  transform:translateX(-50%) translateY(12px);
+  background:#1f2937;color:#fff;
+  padding:10px 20px;border-radius:9px;
+  font-size:14px;opacity:0;
+  transition:all .25s;z-index:300;white-space:nowrap;
+  pointer-events:none;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── Chapters ── */
+.chapters-title{font-size:13px;font-weight:700;margin:14px 0 6px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.chapter-item{
+  display:flex;justify-content:space-between;align-items:baseline;
+  font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);
+}
+.chapter-item:last-child{border-bottom:none}
+.chapter-pg{color:var(--muted);flex-shrink:0;margin-left:8px}
+
+/* ── Multi-photo strip ── */
+.photo-strip{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.photo-thumb-wrap{position:relative;flex-shrink:0}
+.photo-thumb-wrap img{
+  width:72px;height:96px;object-fit:cover;
+  border-radius:8px;border:2px solid var(--border);display:block;
+}
+.photo-thumb-wrap .cover-badge{
+  position:absolute;bottom:4px;left:50%;transform:translateX(-50%);
+  background:var(--accent);color:#fff;font-size:9px;font-weight:700;
+  padding:1px 5px;border-radius:4px;white-space:nowrap;
+}
+.photo-thumb-wrap .remove-btn{
+  position:absolute;top:-6px;right:-6px;
+  width:20px;height:20px;border-radius:50%;
+  background:#ef4444;color:#fff;border:none;cursor:pointer;
+  font-size:12px;line-height:20px;text-align:center;padding:0;
+}
+.add-photo-btn{
+  width:72px;height:96px;border-radius:8px;
+  border:2px dashed var(--border);background:none;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:4px;color:var(--muted);font-size:11px;flex-shrink:0;
+  transition:border-color .15s,color .15s;
+}
+.add-photo-btn:hover{border-color:var(--accent);color:var(--accent)}
+.add-photo-btn svg{width:22px;height:22px}
+.scanning-overlay{
+  position:absolute;inset:0;border-radius:8px;
+  background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;
+}
+.scanning-overlay .mini-spinner{
+  width:20px;height:20px;
+  border:2px solid rgba(255,255,255,.4);border-top-color:#fff;
+  border-radius:50%;animation:spin .7s linear infinite;
+}
+
+/* ── Empty state ── */
+.empty{text-align:center;padding:56px 16px;color:var(--muted)}
+.empty svg{width:44px;height:44px;margin-bottom:12px;opacity:.35}
+.empty p{font-size:15px}
+
+/* ── Count badge ── */
+.count{
+  display:inline-block;padding:2px 8px;border-radius:20px;
+  background:var(--accent);color:#fff;font-size:11px;font-weight:700;
+  margin-left:6px;vertical-align:middle;
+}
+
+/* ── Book card clickable ── */
+.book-card{cursor:pointer;transition:transform .08s,box-shadow .15s}
+.book-card:active{transform:scale(.98)}
+
+/* ── Detail screen ── */
+.detail-back{
+  display:inline-flex;align-items:center;gap:6px;
+  background:none;border:none;color:var(--accent);font-size:14px;
+  font-weight:600;cursor:pointer;padding:0;margin-bottom:14px;
+}
+.detail-cover{
+  width:100%;max-width:160px;height:auto;border-radius:8px;
+  display:block;margin:0 auto 14px;box-shadow:0 4px 14px rgba(0,0,0,.18);
+}
+.detail-meta{font-size:13px;color:var(--muted);margin-top:3px}
+.detail-title{font-size:20px;font-weight:700;text-align:center;margin-top:6px}
+.detail-author{font-size:14px;color:var(--muted);text-align:center;margin-bottom:4px}
+
+.chapter-card{
+  background:var(--card);border-radius:10px;padding:12px 14px;margin-bottom:8px;
+  box-shadow:0 1px 3px rgba(0,0,0,.05);
+}
+.chapter-head{
+  display:flex;justify-content:space-between;align-items:center;
+  cursor:pointer;gap:10px;
+}
+.chapter-head .ch-title{font-size:14px;font-weight:600;flex:1;min-width:0}
+.chapter-head .ch-page{color:var(--muted);font-size:12px;flex-shrink:0}
+.chapter-head .ch-arrow{
+  width:16px;height:16px;color:var(--muted);transition:transform .2s;flex-shrink:0;
+}
+.chapter-card.open .ch-arrow{transform:rotate(180deg)}
+
+.chapter-body{display:none;padding-top:12px;margin-top:10px;border-top:1px solid var(--border)}
+.chapter-card.open .chapter-body{display:block}
+.chapter-summary{
+  font-size:13.5px;line-height:1.55;color:var(--text);
+  white-space:pre-wrap;margin-bottom:10px;
+}
+.chapter-source{
+  font-size:11px;color:var(--muted);font-style:italic;
+  margin-bottom:10px;
+}
+.chapter-actions{display:flex;flex-wrap:wrap;gap:6px}
+.chapter-actions button{
+  flex:1;min-width:120px;
+  padding:9px 10px;border-radius:7px;border:1px solid var(--border);
+  background:var(--card);color:var(--text);font-size:12.5px;font-weight:600;
+  cursor:pointer;transition:background .15s;
+}
+.chapter-actions button.primary{
+  background:var(--accent);color:#fff;border-color:var(--accent);
+}
+.chapter-actions button:disabled{opacity:.55;cursor:wait}
+.chapter-loading{
+  display:flex;align-items:center;gap:8px;
+  font-size:13px;color:var(--muted);padding:6px 0;
+}
+.chapter-loading .mini-spinner{
+  width:14px;height:14px;border:2px solid var(--border);
+  border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;
+}
+
+@media(min-width:600px){
+  body{max-width:480px;margin:0 auto;box-shadow:0 0 40px rgba(0,0,0,.08)}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📚 Catálogo</h1>
+  <p>Digitalizar e organizar sua biblioteca</p>
+</header>
+
+<!-- ═══════════════════════════════ SCAN ═══════════════════════════════ -->
+<section id="sec-scan" class="active">
+
+  <!-- Estado inicial: nenhuma foto ainda -->
+  <div id="state-empty">
+    <div class="card">
+      <div class="capture-zone" onclick="document.getElementById('file-input-cover').click()">
+        <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="1.4">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        <p class="hint">Toque para fotografar (várias fotos de uma vez)</p>
+      </div>
+      <input type="file" id="file-input-cover" accept="image/*" capture="environment" multiple
+             style="display:none" onchange="addPhotos(this)">
+    </div>
+  </div>
+
+  <!-- Estado: fotos capturadas (antes de analisar) -->
+  <div id="state-photos" style="display:none">
+    <div class="card">
+      <p style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">
+        Fotos capturadas
+      </p>
+      <div class="photo-strip" id="photo-strip"></div>
+    </div>
+
+    <button class="btn btn-secondary" onclick="document.getElementById('file-input-cover').click()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+      </svg>
+      Adicionar mais fotos
+    </button>
+    <button class="btn btn-primary" onclick="analyzePhotos()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      Analisar fotos
+    </button>
+    <button class="btn btn-secondary" onclick="resetScan()">Cancelar</button>
+  </div>
+
+  <!-- Estado: análise em andamento -->
+  <div id="state-analyzing" style="display:none">
+    <div class="loader" style="display:block">
+      <div class="spinner"></div>
+      <p id="scan-loader-msg">Analisando fotos…</p>
+    </div>
+  </div>
+
+  <!-- Estado: resultado -->
+  <div id="scan-result" style="display:none">
+    <div class="card">
+      <p style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">
+        Fotos capturadas
+      </p>
+      <div class="photo-strip" id="photo-strip-result"></div>
+    </div>
+
+    <div class="card">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:2px">Verifique e corrija se necessário</p>
+      <label>Título</label>
+      <input type="text" id="f-title" placeholder="Título do livro">
+      <label>Autor</label>
+      <input type="text" id="f-author" placeholder="Nome do autor">
+      <label>Editora</label>
+      <input type="text" id="f-publisher" placeholder="Editora">
+      <label>Ano</label>
+      <input type="text" id="f-year" placeholder="Ano de publicação">
+      <label>ISBN</label>
+      <input type="text" id="f-isbn" placeholder="ISBN">
+      <label>Idioma</label>
+      <input type="text" id="f-language" placeholder="Idioma">
+
+      <div id="chapters-section" style="display:none">
+        <p class="chapters-title">Capítulos detectados</p>
+        <div id="chapters-list"></div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="saveBook()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+        <polyline points="17,21 17,13 7,13 7,21"/>
+        <polyline points="7,3 7,8 15,8"/>
+      </svg>
+      Salvar no catálogo
+    </button>
+    <button class="btn btn-secondary" onclick="resetScan()">Cancelar</button>
+  </div>
+
+  <input type="file" id="file-input-extra" accept="image/*" capture="environment"
+         style="display:none" onchange="addPhoto(this, false)">
+</section>
+
+<!-- ═════════════════════════════ LIBRARY ══════════════════════════════ -->
+<section id="sec-library">
+  <div class="loader" id="lib-loader" style="display:block">
+    <div class="spinner"></div>
+    <p>Carregando biblioteca…</p>
+  </div>
+  <div id="books-list"></div>
+</section>
+
+<!-- ══════════════════════════════ DETAIL ══════════════════════════════ -->
+<section id="sec-detail">
+  <button class="detail-back" onclick="showSection('library')">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+         fill="none" stroke="currentColor" stroke-width="2.2">
+      <polyline points="15 18 9 12 15 6"/>
+    </svg>
+    Voltar
+  </button>
+  <div id="detail-content">
+    <div class="loader" style="display:block">
+      <div class="spinner"></div>
+      <p>Carregando livro…</p>
+    </div>
+  </div>
+  <input type="file" id="chapter-photo-input" accept="image/*" capture="environment" multiple
+         style="display:none">
+</section>
+
+<!-- ══════════════════════════════ SEARCH ══════════════════════════════ -->
+<section id="sec-search">
+  <div class="search-wrap">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+         fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    <input type="search" id="search-input" placeholder="Buscar título, autor, ISBN…"
+           oninput="debounceSearch()">
+  </div>
+  <div id="search-results"></div>
+</section>
+
+<!-- ══════════════════════════════ NAV ══════════════════════════════ -->
+<nav>
+  <button class="active" id="nav-scan" onclick="showSection('scan')">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+      <circle cx="12" cy="13" r="4"/>
+    </svg>
+    Digitalizar
+  </button>
+  <button id="nav-library" onclick="showSection('library')">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+    </svg>
+    Biblioteca
+  </button>
+  <button id="nav-search" onclick="showSection('search')">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    Buscar
+  </button>
+</nav>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+// ── State ──────────────────────────────────────────────────────────────────
+// photos: [{b64, type, dataUrl, scanning}]
+let photos      = [];
+let allChapters = [];
+let searchTimer = null;
+const SECTIONS  = ['scan', 'library', 'search', 'detail'];
+const NAV_SECTIONS = ['scan', 'library', 'search'];
+
+// ── Navigation ─────────────────────────────────────────────────────────────
+function showSection(name) {
+  SECTIONS.forEach(s => {
+    document.getElementById('sec-' + s).classList.toggle('active', s === name);
+  });
+  NAV_SECTIONS.forEach(s => {
+    // detail keeps "library" tab highlighted
+    const navTarget = name === 'detail' ? 'library' : name;
+    document.getElementById('nav-' + s).classList.toggle('active', s === navTarget);
+  });
+  if (name === 'library') loadBooks();
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+function toast(msg, ms = 3000) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), ms);
+}
+
+// ── Add photos (multiple at once, no analysis yet) ───────────────────────
+async function addPhotos(input) {
+  const files = Array.from(input.files);
+  input.value = '';
+  if (!files.length) return;
+
+  // Read all files and convert to base64
+  const filePromises = files.map(file => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const dataUrl = e.target.result;
+        const b64 = dataUrl.split(',')[1];
+        const mime = file.type || 'image/jpeg';
+        resolve({ b64, type: mime, dataUrl });
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+
+  const imageData = await Promise.all(filePromises);
+
+  // Add to photos array (no scanning yet)
+  imageData.forEach(img => {
+    photos.push({ ...img, scanning: false });
+  });
+
+  // Show photos state
+  document.getElementById('state-empty').style.display = 'none';
+  document.getElementById('state-photos').style.display = 'block';
+  renderStrip('photo-strip');
+}
+
+// ── Analyze photos (triggered by user) ─────────────────────────────────
+async function analyzePhotos() {
+  if (!photos.length) return;
+
+  // Show analyzing state
+  document.getElementById('state-photos').style.display = 'none';
+  document.getElementById('state-analyzing').style.display = 'block';
+  document.getElementById('scan-loader-msg').textContent = `Analisando ${photos.length} foto(s)…`;
+
+  try {
+    // Send all images to backend at once
+    const fd = new FormData();
+    photos.forEach((img, i) => {
+      fd.append('images', b64ToBlob(img.b64, img.type), `photo${i}.jpg`);
+    });
+
+    const res = await fetch('/scan', { method: 'POST', body: fd });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+
+    // Fill form fields with merged data
+    document.getElementById('f-title').value     = data.title     || '';
+    document.getElementById('f-author').value    = data.author    || '';
+    document.getElementById('f-publisher').value = data.publisher || '';
+    document.getElementById('f-year').value      = data.year      || '';
+    document.getElementById('f-isbn').value      = data.isbn      || '';
+    document.getElementById('f-language').value  = data.language  || '';
+
+    // Merge chapters
+    const newChaps = data.chapters || data.table_of_contents || [];
+    if (newChaps.length) {
+      allChapters = allChapters.concat(newChaps);
+      renderChapters();
+    }
+
+    document.getElementById('state-analyzing').style.display = 'none';
+    document.getElementById('scan-result').style.display = 'block';
+    renderStrip('photo-strip-result');
+
+  } catch (err) {
+    document.getElementById('state-analyzing').style.display = 'none';
+    document.getElementById('state-photos').style.display = 'block';
+    toast('Erro na análise: ' + err.message);
+  }
+}
+
+// ── Render photo strip ─────────────────────────────────────────────────────
+function renderStrip(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = photos.map((p, i) => `
+    <div class="photo-thumb-wrap">
+      <img src="${p.dataUrl}" alt="Foto ${i+1}">
+      ${p.scanning
+        ? `<div class="scanning-overlay"><div class="mini-spinner"></div></div>`
+        : `<button class="remove-btn" onclick="removePhoto(${i})">×</button>`}
+      ${i === 0 ? `<span class="cover-badge">Capa</span>` : ''}
+    </div>
+  `).join('');
+}
+
+// ── Remove photo ───────────────────────────────────────────────────────────
+function removePhoto(idx) {
+  photos.splice(idx, 1);
+  if (photos.length === 0) { resetScan(); return; }
+  renderStrip('photo-strip-result');
+}
+
+// ── Render chapters ────────────────────────────────────────────────────────
+function renderChapters() {
+  const chapSec  = document.getElementById('chapters-section');
+  const chapList = document.getElementById('chapters-list');
+  if (!allChapters.length) { chapSec.style.display = 'none'; return; }
+  chapList.innerHTML = allChapters.map(c =>
+    `<div class="chapter-item">
+       <span>${esc(c.title ?? c)}</span>
+       <span class="chapter-pg">${c.page ?? ''}</span>
+     </div>`
+  ).join('');
+  chapSec.style.display = 'block';
+}
+
+// ── Save ───────────────────────────────────────────────────────────────────
+async function saveBook() {
+  const body = {
+    title:     document.getElementById('f-title').value,
+    author:    document.getElementById('f-author').value,
+    publisher: document.getElementById('f-publisher').value,
+    year:      document.getElementById('f-year').value,
+    isbn:      document.getElementById('f-isbn').value,
+    language:  document.getElementById('f-language').value,
+    images:    photos.map(p => ({ b64: p.b64, type: p.type })),
+    chapters:  allChapters.map(c => ({
+      title: typeof c === 'string' ? c : (c.title || ''),
+      page:  typeof c === 'object' ? (c.page ?? '') : '',
+    })).filter(c => c.title),
+  };
+  try {
+    const res = await fetch('/books', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    toast('✓ Livro salvo com sucesso!');
+    resetScan();
+  } catch (err) {
+    toast('Erro ao salvar: ' + err.message);
+  }
+}
+
+// ── Reset ──────────────────────────────────────────────────────────────────
+function resetScan() {
+  photos = [];
+  allChapters = [];
+  document.getElementById('state-empty').style.display = 'block';
+  document.getElementById('state-photos').style.display = 'none';
+  document.getElementById('state-analyzing').style.display = 'none';
+  document.getElementById('scan-result').style.display = 'none';
+  document.getElementById('photo-strip').innerHTML = '';
+  document.getElementById('photo-strip-result').innerHTML = '';
+  document.getElementById('chapters-section').style.display = 'none';
+  document.getElementById('chapters-list').innerHTML = '';
+  ['title','author','publisher','year','isbn','language'].forEach(k =>
+    document.getElementById('f-' + k).value = ''
+  );
+}
+
+// ── Library ────────────────────────────────────────────────────────────────
+async function loadBooks() {
+  document.getElementById('lib-loader').style.display = 'block';
+  document.getElementById('books-list').innerHTML = '';
+  try {
+    const res = await fetch('/books');
+    const books = await res.json();
+    renderBooks(books, 'books-list');
+  } catch {
+    toast('Erro ao carregar livros');
+  } finally {
+    document.getElementById('lib-loader').style.display = 'none';
+  }
+}
+
+function renderBooks(books, containerId) {
+  const el = document.getElementById(containerId);
+  if (!books.length) {
+    el.innerHTML = `<div class="empty">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.5">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      </svg>
+      <p>Nenhum livro encontrado</p>
+    </div>`;
+    return;
+  }
+  el.innerHTML = books.map(b => {
+    const thumb = b.images && b.images.length
+      ? `<img class="book-thumb" src="/uploads/${esc(b.images[0])}" alt="Capa"
+             onerror="this.outerHTML='<div class=thumb-placeholder>📖</div>'">`
+      : `<div class="thumb-placeholder">📖</div>`;
+    const meta = [b.publisher, b.year, b.language].filter(Boolean).join(' · ');
+    return `<div class="card book-card" onclick="openBook(${b.id})">
+      <div class="book-item">
+        ${thumb}
+        <div class="book-info">
+          <div class="book-title">${esc(b.title || 'Sem título')}</div>
+          <div class="book-author">${esc(b.author || '')}</div>
+          ${meta ? `<div class="book-meta">${esc(meta)}</div>` : ''}
+          ${b.isbn ? `<div class="book-meta">ISBN ${esc(b.isbn)}</div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Book detail ────────────────────────────────────────────────────────────
+let currentBook = null;
+
+async function openBook(id) {
+  showSection('detail');
+  const el = document.getElementById('detail-content');
+  el.innerHTML = `<div class="loader" style="display:block">
+    <div class="spinner"></div><p>Carregando livro…</p></div>`;
+  try {
+    const res = await fetch('/books/' + id);
+    if (!res.ok) throw new Error(await res.text());
+    currentBook = await res.json();
+    renderDetail();
+  } catch (err) {
+    el.innerHTML = `<div class="empty"><p>Erro: ${esc(err.message)}</p></div>`;
+  }
+}
+
+function renderDetail() {
+  const b = currentBook;
+  if (!b) return;
+  const el = document.getElementById('detail-content');
+
+  const cover = b.images && b.images.length
+    ? `<img class="detail-cover" src="/uploads/${esc(b.images[0])}" alt="Capa">`
+    : '';
+  const meta = [b.publisher, b.year, b.language].filter(Boolean).join(' · ');
+
+  const chaptersHtml = (b.chapters && b.chapters.length)
+    ? b.chapters.map(c => renderChapterCard(c)).join('')
+    : `<div class="empty"><p>Nenhum capítulo registrado</p></div>`;
+
+  el.innerHTML = `
+    <div class="card">
+      ${cover}
+      <div class="detail-title">${esc(b.title || 'Sem título')}</div>
+      ${b.author ? `<div class="detail-author">${esc(b.author)}</div>` : ''}
+      ${meta ? `<div class="detail-meta" style="text-align:center">${esc(meta)}</div>` : ''}
+      ${b.isbn ? `<div class="detail-meta" style="text-align:center">ISBN ${esc(b.isbn)}</div>` : ''}
+    </div>
+    <p class="chapters-title">Capítulos <span class="count">${(b.chapters||[]).length}</span></p>
+    <div id="chapters-container">${chaptersHtml}</div>
+  `;
+}
+
+function renderChapterCard(c) {
+  const summaryHtml = c.summary
+    ? `<div class="chapter-summary">${esc(c.summary)}</div>
+       <div class="chapter-source">Fichamento gerado ${c.summary_source === 'photos' ? 'a partir das fotos' : 'pelo título'}.</div>`
+    : `<div class="chapter-source" style="margin-bottom:8px">Sem fichamento ainda.</div>`;
+
+  const actionsHtml = c.summary
+    ? `<button onclick="event.stopPropagation();regenerateSummary(${c.id}, false)">Regenerar</button>
+       <button onclick="event.stopPropagation();pickPhotosForChapter(${c.id})">Refinar com fotos</button>`
+    : `<button class="primary" onclick="event.stopPropagation();generateSummary(${c.id}, false)">Gerar fichamento</button>
+       <button onclick="event.stopPropagation();pickPhotosForChapter(${c.id})">Com fotos</button>`;
+
+  return `
+    <div class="chapter-card" id="chapter-${c.id}">
+      <div class="chapter-head" onclick="toggleChapter(${c.id})">
+        <span class="ch-title">${esc((c.position+1) + '. ' + (c.title || ''))}</span>
+        ${c.page ? `<span class="ch-page">pg. ${esc(c.page)}</span>` : ''}
+        <svg class="ch-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </div>
+      <div class="chapter-body">
+        ${summaryHtml}
+        <div class="chapter-actions">${actionsHtml}</div>
+      </div>
+    </div>
+  `;
+}
+
+function toggleChapter(id) {
+  const card = document.getElementById('chapter-' + id);
+  if (card) card.classList.toggle('open');
+}
+
+function setChapterLoading(id, msg) {
+  const card = document.getElementById('chapter-' + id);
+  if (!card) return;
+  card.classList.add('open');
+  const body = card.querySelector('.chapter-body');
+  body.innerHTML = `<div class="chapter-loading"><div class="mini-spinner"></div>${esc(msg)}</div>`;
+}
+
+function updateChapter(updated) {
+  if (!currentBook) return;
+  const idx = currentBook.chapters.findIndex(c => c.id === updated.id);
+  if (idx >= 0) {
+    currentBook.chapters[idx] = { ...currentBook.chapters[idx], ...updated };
+  }
+  const card = document.getElementById('chapter-' + updated.id);
+  if (card) {
+    card.outerHTML = renderChapterCard(currentBook.chapters[idx]);
+    document.getElementById('chapter-' + updated.id).classList.add('open');
+  }
+}
+
+async function generateSummary(chapterId, withPhotos, photoData) {
+  setChapterLoading(chapterId, withPhotos ? 'Analisando fotos…' : 'Gerando fichamento…');
+  const body = withPhotos && photoData ? { images: photoData } : {};
+  try {
+    const res = await fetch(`/chapters/${chapterId}/summarize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    updateChapter({
+      id: chapterId,
+      summary: data.summary,
+      summary_source: data.source,
+    });
+  } catch (err) {
+    toast('Erro: ' + err.message);
+    // re-render to recover UI
+    const ch = currentBook.chapters.find(c => c.id === chapterId);
+    if (ch) {
+      const card = document.getElementById('chapter-' + chapterId);
+      if (card) card.outerHTML = renderChapterCard(ch);
+    }
+  }
+}
+
+async function regenerateSummary(chapterId) {
+  try {
+    await fetch(`/chapters/${chapterId}/summary`, { method: 'DELETE' });
+  } catch {}
+  generateSummary(chapterId, false);
+}
+
+function pickPhotosForChapter(chapterId) {
+  const input = document.getElementById('chapter-photo-input');
+  input.onchange = async () => {
+    const files = Array.from(input.files || []);
+    input.value = '';
+    if (!files.length) return;
+    setChapterLoading(chapterId, `Lendo ${files.length} foto(s)…`);
+    try {
+      const photoData = await Promise.all(files.map(f => new Promise(resolve => {
+        const r = new FileReader();
+        r.onload = e => resolve({
+          b64: e.target.result.split(',')[1],
+          type: f.type || 'image/jpeg',
+        });
+        r.readAsDataURL(f);
+      })));
+      generateSummary(chapterId, true, photoData);
+    } catch (err) {
+      toast('Erro lendo fotos: ' + err.message);
+    }
+  };
+  input.click();
+}
+
+// ── Search ─────────────────────────────────────────────────────────────────
+function debounceSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(doSearch, 380);
+}
+
+async function doSearch() {
+  const q = document.getElementById('search-input').value.trim();
+  const el = document.getElementById('search-results');
+  if (!q) { el.innerHTML = ''; return; }
+  try {
+    const res = await fetch('/search?q=' + encodeURIComponent(q));
+    renderBooks(await res.json(), 'search-results');
+  } catch {
+    toast('Erro na busca');
+  }
+}
+
+// ── Utils ──────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function b64ToBlob(b64, type) {
+  const bin = atob(b64);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type });
+}
+</script>
+</body>
+</html>
